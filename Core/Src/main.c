@@ -251,8 +251,17 @@ void LedCheck(int x1, uint8_t r1, uint8_t g1, uint8_t b1, uint8_t brightness1) {
 		SetLed(x1, r1, g1, b1, brightness1);
 	}
 }
+void LcdSendDataNum(uint8_t x) { // dijeljenje brojeva na decimale
+	uint8_t j, d;
+	j = x % 10;
+	d = x / 10;
+	numbers[j];
+	if (d > 0)
+		LcdSendData(numbers[d]);
+	LcdSendData(numbers[j]);
+}
 void OneStep(uint8_t NLed, uint8_t Brightness) {
-	CheckpointLedSet();
+	CheckpointLedSet(25);
 
 	SetLed(NLed, 0, g, 0, Brightness);
 
@@ -286,28 +295,29 @@ void OneLap(uint8_t speed) {
 	}
 
 }
-void CheckpointLedSet() {
+void CheckpointLedSet(uint8_t brightness) {
 	//printf("Checkpoint p1=%d Oneshot[0]==%d\n",p1, oneShot[0]);
 	if (p1 >= 1) {
-		SetLed(41, 255, 255, 255, 45);
+		SetLed(41, 255, 255, 255, brightness);
 	}
 	if (p1 >= 2) {
-		SetLed(14, 255, 255, 255, 45);
+		SetLed(14, 255, 255, 255, brightness);
 	}
 	if (p1 >= 3) {
-		SetLed(28, 255, 255, 255, 45);
+		SetLed(28, 255, 255, 255, brightness);
 	}
 	if (p1 >= 4) {
-		SetLed(53, 255, 255, 255, 45);
+		SetLed(53, 255, 255, 255, brightness);
 	}
 }
 
 void Start() {
+	Buzzer(100);
 	LcdSendCmd(0x01); 					//Clear display
 	LcdSendString(
 			"Dobrodosli,         Za pocetak klikni                       Tipku");
 	HAL_Delay(50);
-	printf("Value of s1 == -1 = %d\n", s1);
+	//printf("Value of s1 == -1 = %d\n", s1);
 	s1 = -1;
 
 	while (s1 > 4 || s1 < 1) {
@@ -318,21 +328,24 @@ void Start() {
 	HAL_Delay(500);
 	s1 = 1;
 	s11 = s1;
-	uint8_t t1 = 9;
+	uint8_t t1 = 5;
 	do {
 		LcdSendCmd(0x01); 					//Clear display
-		LcdSendString("Odaberi broj igraca:");
+		LcdSendString("Broj igraca:");
 		p1 = s1;
-		LcdSendData(numbers[p1]);
-		LcdSendString("Igra zapocinje za: ");
-		LcdSendData(numbers[t1]);
+		//LcdSendData(numbers[p1]);
+		LcdSendDataNum(p1);
+		LcdSendString("       Igra zapocinje: ");
+		//LcdSendData(numbers[t1]);
+		LcdSendDataNum(t1);
 		LcdSendString("s");
 		HAL_Delay(1000);
 		t1--;
 	} while (t1 > 0);
 	LcdSendCmd(0x01); 					//Clear display
-	LcdSendString("Zapocnimo!!         Broj igraca je:");
-	LcdSendData(numbers[p1]);
+	LcdSendString("Zapocnimo!!         Broj igraca je: ");
+	//LcdSendData(numbers[p1]);
+	LcdSendDataNum(p1);
 	HAL_Delay(3000);
 }
 
@@ -341,40 +354,52 @@ void Glavna(uint8_t rmax) {
 	for (int i = 0; i < 4; i++)
 		pScore[i] = 0;
 	do {
-		CheckpointLedSet();
+
+		CheckpointLedSet(25);
 		do {
 			LcdSendCmd(0x01); 					//Clear display
 			LcdSendString("Brzina igre:x");
-			LcdSendData(numbers[r1]);
+			//LcdSendData(numbers[r1]);
+			LcdSendDataNum(r1);
 
 			LcdSendString("      P1:");
-			LcdSendData(numbers[pScore[0]]);
+			//LcdSendData(numbers[pScore[0]]);
+			LcdSendDataNum(pScore[0]);
 			if (p1 >= 2) {
 				LcdSendString(" P2:");
-				LcdSendData(numbers[pScore[1]]);
+				//LcdSendData(numbers[pScore[1]]);
+				LcdSendDataNum(pScore[1]);
 			} else
 				LcdSendString("     ");
 			if (p1 >= 3) {
 				LcdSendString(" P3:");
-				LcdSendData(numbers[pScore[2]]);
+				//LcdSendData(numbers[pScore[2]]);
+				LcdSendDataNum(pScore[2]);
 			} else
 				LcdSendString("     ");
 			if (p1 >= 4) {
 				LcdSendString(" P4:");
-				LcdSendData(numbers[pScore[3]]);
+				//LcdSendData(numbers[pScore[3]]);
+				LcdSendDataNum(pScore[3]);
 			} else
 				LcdSendString("     ");
 			LcdSendString("                     Spreman?  ");
-			LcdSendData(numbers[t1]);
+			//LcdSendData(numbers[t1]);
+			LcdSendDataNum(t1);
+			if (t1 < 3)
+				Buzzer(100);
 			HAL_Delay(1000);
 			t1--;
 		} while (t1 > 0);
-
+		for (int j = 0; j < n; j++) //reset ledica
+			SetLed(j, 0, 0, 0, 0);
+		WS2812b_Send();
+		CheckpointLedSet(25);
 		e1 = -1, e2 = -1, e3 = -1, e4 = -1;
 		int m = 0;
 		while (m < 3
-				&& (e1 == -1 && (p1 < 2 || e2 == -1) && (p1 < 3 || e3 == -1)
-						&& (p1 < 4 || e4 == -1))) {
+				&& (e1 == -1 || (p1 >= 2 && e2 == -1) || (p1 >= 3 && e3 == -1)
+						|| (p1 >= 4 && e4 == -1))) {
 			OneLap(r1);
 			m++;
 		}
@@ -382,7 +407,7 @@ void Glavna(uint8_t rmax) {
 		 OneLap(r1);
 		 }*/
 		r1 += 2;
-		t1 = 7;
+		t1 = 5;
 		if (e1 != -1)
 			pScore[0] += 5 - (abs(41 - e1));
 		if (e2 != -1)
@@ -395,27 +420,32 @@ void Glavna(uint8_t rmax) {
 			if (pScore[j] <= 0)
 				pScore[j] = 0;
 		}
-	} while (r1 < r1 * rmax + 1);
+	} while (r1 < rmax * 2 + 1);
 	LcdSendCmd(0x01); 					//Clear display
-	LcdSendString("Kraj igre");
-	LcdSendString("      P1:");
-	LcdSendData(numbers[pScore[0]]);
+	LcdSendString("Kraj igre           ");
+	LcdSendString("P1:");
+	//LcdSendData(numbers[pScore[0]]);
+	LcdSendDataNum(pScore[0]);
 	if (p1 >= 2) {
 		LcdSendString(" P2:");
-		LcdSendData(numbers[pScore[1]]);
+		//LcdSendData(numbers[pScore[1]]);
+		LcdSendDataNum(pScore[1]);
 	} else
 		LcdSendString("     ");
 	if (p1 >= 3) {
 		LcdSendString(" P3:");
-		LcdSendData(numbers[pScore[2]]);
+		//LcdSendData(numbers[pScore[2]]);
+		LcdSendDataNum(pScore[2]);
 	} else
 		LcdSendString("     ");
 	if (p1 >= 4) {
 		LcdSendString(" P4:");
-		LcdSendData(numbers[pScore[3]]);
+		//LcdSendData(numbers[pScore[3]]);
+		LcdSendDataNum(pScore[3]);
 	} else
 		LcdSendString("     ");
 	LcdSendString("                     Hvala na igranju");
+	HAL_Delay(5000);
 }
 void Buzzer(uint16_t duration) {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
@@ -458,18 +488,19 @@ int main(void) {
 	MX_I2C1_Init();
 	/* USER CODE BEGIN 2 */
 	LcdInit();
+	HAL_Delay(1000);
 	/*LcdSendString("MAAAAA BRAVOOOOOO");
 	 HAL_Delay(1000);
 	 LcdSendString("   NITKO U GENERACIJI:)RASTURAS KAO        CESTITAMMM!!!!");
 	 */
 
-	Start();
-	Glavna(3);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1) {
+		Start();
+		Glavna(5);
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
